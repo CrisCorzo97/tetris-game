@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import './App.css';
-import { BOARD_HEIGHT, BOARD_WIDTH, board, colorPallete } from './constants';
+import {
+  BOARD_HEIGHT,
+  BOARD_WIDTH,
+  board,
+  colorPallete,
+  piece,
+} from './constants';
 import { BLOCK_SIZE } from './constants/sizes';
 
 function App() {
@@ -8,7 +14,7 @@ function App() {
     useState<CanvasRenderingContext2D | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // 1. Inicializar el canvas
+  // Inicializar el canvas
   useEffect(() => {
     if (canvasRef.current) {
       canvasRef.current.width = BLOCK_SIZE * BOARD_WIDTH;
@@ -21,7 +27,7 @@ function App() {
     canvasContext && canvasContext.scale(BLOCK_SIZE, BLOCK_SIZE);
   }, [canvasContext]);
 
-  // 2. Game loop
+  // Game loop
   const draw = useCallback(() => {
     if (canvasContext && canvasRef.current) {
       canvasContext.fillStyle = '#000';
@@ -40,6 +46,20 @@ function App() {
           }
         });
       });
+
+      piece.shape.forEach((row, y) => {
+        row.forEach((value, x) => {
+          if (value) {
+            canvasContext.fillStyle = colorPallete.blue;
+            canvasContext.fillRect(
+              x + piece.position.x,
+              y + piece.position.y,
+              1,
+              1
+            );
+          }
+        });
+      });
     }
   }, [canvasContext, canvasRef]);
 
@@ -50,7 +70,45 @@ function App() {
 
   update();
 
-  // 3. Board
+  // Collision
+  const checkCollision = useCallback(() => {
+    return piece.shape.find((row, y) => {
+      return row.find((value, x) => {
+        return (
+          value !== 0 &&
+          board[y + piece.position.y]?.[x + piece.position.x] !== 0
+        );
+      });
+    });
+  }, []);
+
+  // Movimientos
+  useEffect(() => {
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        piece.position.x--;
+        if (checkCollision()) {
+          piece.position.x++;
+        }
+      }
+      if (e.key === 'ArrowRight') {
+        piece.position.x++;
+        if (checkCollision()) {
+          piece.position.x--;
+        }
+      }
+      if (e.key === 'ArrowDown') {
+        piece.position.y++;
+        if (checkCollision()) {
+          piece.position.y--;
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeydown);
+
+    return () => document.removeEventListener('keydown', handleKeydown);
+  }, [checkCollision]);
 
   return (
     <>
